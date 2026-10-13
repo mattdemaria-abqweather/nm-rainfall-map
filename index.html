@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>New Mexico 24-Hour Rainfall Map</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background-color: #f4f4f4; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        img { max-width: 100%; height: auto; border: 1px solid #ccc; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>New Mexico 24-Hour Observed Rainfall</h1>
+        <p>Automated daily map powered by NOAA gauge-corrected QPE data.</p>
+        <!-- The URL parameter forces browsers to reload the fresh image rather than caching old versions -->
+        <img src="NM_24h_Rainfall.png" id="map" alt="New Mexico Rainfall Map">
+        <script>
+            document.getElementById('map').src = "NM_24h_Rainfall.png?t=" + new Date().getTime();
+        </script>
+    </div>
+</body>
+</html>
