@@ -8,19 +8,36 @@ import cartopy.feature as cfeature
 from datetime import datetime, timedelta, timezone
 import os
 
-# 1. Fetch Yesterday's Gauge-Corrected 24-Hour QPE (Iowa State Mesonet Archive)
+# 1. Fetch Guaranteed 24-Hour QPE GeoTIFF
+# Uses the permanent IEM real-time link first, falling back to date-stamped archive if needed
 now = datetime.now(timezone.utc)
 yesterday = now - timedelta(days=1)
 date_str = yesterday.strftime('%Y%m%d')
 
-tif_url = f"https://mesonet.agron.iastate.edu/archive/data/{yesterday.year}/{yesterday.strftime('%m')}/{yesterday.strftime('%d')}/GIS/mrms/p24h_{date_str}1200.tif"
-tif_filename = "mrms_24h.tif"
+urls_to_try = [
+    "https://mesonet.agron.iastate.edu/data/gis/images/4326/mrms/p24h.tif",
+    f"https://mesonet.agron.iastate.edu/archive/data/{yesterday.year}/{yesterday.strftime('%m')}/{yesterday.strftime('%d')}/GIS/mrms/p24h_{date_str}1200.tif",
+    f"https://mesonet.agron.iastate.edu/archive/data/{yesterday.year}/{yesterday.strftime('%m')}/{yesterday.strftime('%d')}/GIS/mrms/p24h_{date_str}0000.tif"
+]
 
-print(f"Downloading 24-Hour QPE GeoTIFF for {date_str}...")
-req = urllib.request.Request(tif_url, headers={'User-Agent': 'Mozilla/5.0'})
-with urllib.request.urlopen(req) as response:
-    with open(tif_filename, 'wb') as f:
-        f.write(response.read())
+tif_filename = "mrms_24h.tif"
+download_success = False
+
+for tif_url in urls_to_try:
+    try:
+        print(f"Attempting download from: {tif_url}")
+        req = urllib.request.Request(tif_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            with open(tif_filename, 'wb') as f:
+                f.write(response.read())
+        download_success = True
+        print("Download successful!")
+        break
+    except Exception as e:
+        print(f"Failed to fetch from {tif_url}: {e}")
+
+if not download_success:
+    raise RuntimeError("Could not retrieve 24-hour QPE GeoTIFF from any available IEM endpoint.")
 
 # 2. Process GeoTIFF Grid & Clip to New Mexico Bounding Box
 da = rioxarray.open_rasterio(tif_filename)
