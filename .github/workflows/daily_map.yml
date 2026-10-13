@@ -1,0 +1,38 @@
+name: Daily Rainfall Map Generator
+
+on:
+  schedule:
+    # Runs at 13:00 UTC (7:00 AM MDT) every day
+    - cron: '0 13 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub UI anytime
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install matplotlib cartopy pillow
+
+      - name: Generate Map
+        run: python generate_map.py
+
+      - name: Commit and Push Updated Map
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action Bot"
+          git add NM_24h_Rainfall.png
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update daily rainfall map"
+          git push
