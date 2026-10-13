@@ -5,8 +5,7 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 from PIL import Image
 import io
-from datetime import datetime, timedelta
-import numpy as np
+from datetime import datetime, timedelta, timezone
 
 # 1. Fetch 24-Hour QPE Data from IEM WMS
 wms_url = (
@@ -28,8 +27,8 @@ fig = plt.figure(figsize=(14, 12), dpi=300)
 ax = plt.axes([0.0, 0.05, 1.0, 0.88], projection=ccrs.PlateCarree())
 ax.set_extent([-109.5, -102.5, 31.0, 37.5], crs=ccrs.PlateCarree())
 
-# Terrain / Gray Background for Zero Rainfall
-ax.set_facecolor('#dcd6cd') 
+# Clean light background for zero rainfall areas
+ax.set_facecolor('#f4f4f4') 
 
 # Add Boundaries (State Lines & Counties)
 counties = cfeature.NaturalEarthFeature(
@@ -39,32 +38,38 @@ counties = cfeature.NaturalEarthFeature(
     facecolor='none'
 )
 
-ax.add_feature(counties, linewidth=0.6, edgecolor='black', zorder=3)
+ax.add_feature(counties, linewidth=0.6, edgecolor='#444444', zorder=3)
 ax.add_feature(cfeature.STATES.with_scale('10m'), linewidth=2.0, edgecolor='black', zorder=4)
 
 # Overlay QPE Layer
 ax.imshow(overlay_img, origin='upper', extent=[-109.5, -102.5, 31.0, 37.5], 
           transform=ccrs.PlateCarree(), zorder=2)
 
-# 3. Create Custom Vertical Colorbar Legend matching NWS San Antonio Style
+# 3. Create Custom Vertical Colorbar Legend
 nws_colors = [
     '#7be382', '#38a800', '#267300', # Greens (0.01 - 0.5")
     '#ffff00', '#ffaa00', '#ff5500', # Yellow/Gold/Orange (0.5 - 2.0")
-    '#e60000', '#980000', '#730000'  # Reds / Magenta (3.0" - 8.0"+)
+    '#e60000', '#980000', '#730000', # Reds (2.0 - 6.0")
+    '#4a0000'                       # Dark Maroon/Purple (6.0 - 8.0"+)
 ]
 levels = [0.01, 0.1, 0.25, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, 8.0]
 cmap = ListedColormap(nws_colors)
 norm = BoundaryNorm(levels, ncolors=cmap.N, clip=True)
 
 # Add Vertical Inset Colorbar on Left Side
-cax = fig.add_axes([0.03, 0.15, 0.025, 0.65], facecolor='#111111') # Dark translucent box
-cbar = fig.colorbar(plt.cm.ScalarMappable(norm=norm, cmap=cmap), cax=cax, orientation='vertical')
+cax = fig.add_axes([0.03, 0.15, 0.025, 0.65], facecolor='#111111')
+cbar = fig.colorbar(
+    plt.cm.ScalarMappable(norm=norm, cmap=cmap), 
+    cax=cax, 
+    orientation='vertical',
+    ticks=levels
+)
 cbar.set_label('Est. Precipitation (in)', color='white', fontsize=12, fontweight='bold', labelpad=10)
 cbar.ax.yaxis.set_tick_params(color='white')
-plt.setp(plt.getp(cbar.ax, 'yticklabels'), color='white', fontweight='bold', fontsize=10)
+cbar.ax.set_yticklabels([str(l) for l in levels], color='white', fontweight='bold', fontsize=9)
 
-# 4. Top Header Banner (Dark NWS Banner)
-now = datetime.utcnow()
+# 4. Top Header Banner
+now = datetime.now(timezone.utc)
 yesterday = now - timedelta(days=1)
 valid_start = yesterday.strftime('%m/%d/%Y 07:00 AM MDT')
 valid_end = now.strftime('%m/%d/%Y 07:00 AM MDT')
